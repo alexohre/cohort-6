@@ -39,17 +39,25 @@ contract Crowdfunding {
         require(!isFundingComplete, "Funding goal already reached");
 
         // Calculate contribution amount and process any refunds
+
         uint256 refundableAmount = _determineIfAmountIsRefundable(msg.value);
+
+        // check if refundable amount is > 0
+        if (refundableAmount > 0) {
+            transferRefundableAmount(refundableAmount, msg.sender);
+        }
+
         // console.log("contributed Amount____%s", refundableAmount);
         // Update contribution record
-        contributions[msg.sender] += refundableAmount;
-        totalFundsRaised += refundableAmount;
-        // console.log("total funds raised____%s", totalFundsRaised);
+        uint256 contributionsValue = msg.value - refundableAmount;
+        contributions[msg.sender] += contributionsValue;
+        console.log("E work ooooo______", contributions[msg.sender]);
+        totalFundsRaised += contributionsValue;
+        console.log("total funds raised____%s", totalFundsRaised);
 
         // Check if funding goal is reached
         if (totalFundsRaised >= FUNDING_GOAL) {
             isFundingComplete = true;
-            // console.log("isComplete____%s", isFundingComplete);
         }
 
         // Calculate token reward
@@ -59,19 +67,25 @@ contract Crowdfunding {
 
         if (tokenReward > 0) {
             // console.log("the contract caller____%s", msg.sender);
-            sendRewardToken(tokenReward, msg.sender);
+            bool isTransfered = sendRewardToken(tokenReward, msg.sender);
+            require(isTransfered, "Token transfer failed");
             // console.log("token reward____%s", tokenReward);
-            emit TokenRewardSent(msg.sender, tokenReward);
-            return true;
+
+            // Check for NFT eligibility
+            bool isNftTransfered = mintNft(msg.sender);
+            require(isNftTransfered, "NFT transfer failed");
+
+            emit ContributionReceived(msg.sender, msg.value);
+        } else {
+            return false;
         }
-
-        // Check for NFT eligibility
-        mintNft(msg.sender);
-
-        emit ContributionReceived(msg.sender, msg.value);
     }
 
     function checkNftEligibilty(address _address) private returns (bool) {
+        console.log("contributor Amount______:", contributions[_address]);
+        console.log("nft threshold___", NFT_THRESHOLD);
+        console.log("Has receivedNft___", !hasReceivedNFT[_address]);
+
         if (contributions[_address] >= NFT_THRESHOLD && !hasReceivedNFT[_address]) {
             return true;
         }
@@ -92,21 +106,29 @@ contract Crowdfunding {
         return tokenReward;
     }
 
-    function sendRewardToken(uint256 _amount, address _recipient) private {
+    function sendRewardToken(uint256 _amount, address _recipient) private returns (bool) {
         uint256 rewardAmount = calculateReward(_amount);
         rewardToken.transferFrom(address(this), _recipient, rewardAmount);
+        emit TokenRewardSent(msg.sender, rewardAmount);
+
+        return true;
     }
 
     function _determineIfAmountIsRefundable(uint256 _contributionAmount) private returns (uint256) {
         // Calculate the remaining amount needed to complete the funding goal
         // return refundableAmount;
+        // console.log("contribution Amount____%s", _contributionAmount);
         uint256 amountToReachThreshold = FUNDING_GOAL - totalFundsRaised;
-        if (_contributionAmount > amountToReachThreshold) {
+        // console.log("amount to reach threshold____%s", amountToReachThreshold);
+        // console.log("funding goal____%s", FUNDING_GOAL);
+        if (_contributionAmount >= amountToReachThreshold) {
             // return the excess amount
             uint256 refundAmount = _contributionAmount - amountToReachThreshold;
+            // console.log("refundable amount____%s", refundAmount);
             return refundAmount;
         }
-        return 0;
+        // return 0;
+        return _contributionAmount;
     }
 
     function transferRefundableAmount(uint256 _amount, address _contributor) private {
