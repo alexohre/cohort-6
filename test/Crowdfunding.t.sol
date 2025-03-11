@@ -8,25 +8,23 @@ import {RewardToken} from "../contracts/with-foundry/RewardToken.sol";
 import {RewardNft} from "../contracts/with-foundry/RewardNft.sol";
 
 contract CrowdfundingTest is Test {
+    // Crowdfunding contract state variables
     Crowdfunding public crowdfunding;
     RewardToken public rewardtoken;
     RewardNft public rewardnft;
-    address public nftAddr = 0x2e234DAe75C793f67A35089C9d99245E1C58470b;
-    address public tokenAddr = 0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f;
-    // address public owner;
     uint public constant FUNDING_GOAL = 50 ether;
     uint public constant NFT_THRESHOLD = 5 ether;
     uint256 public totalFundsRaised;
     bool public isFundingComplete;
     uint256 constant REWARD_RATE = 100;
 
+    // Addresses for testing
     address crowdfundingAddr = address(this);
     address owner = vm.addr(1);
     address addr2 = vm.addr(2);
     address addr3 = vm.addr(3);
-    address addr5 = vm.addr(5);
     address addr4 = vm.addr(4);
-    // address crowdfundingAddr;
+    address addr5 = vm.addr(5);
 
     receive() external payable {}
 
@@ -43,14 +41,14 @@ contract CrowdfundingTest is Test {
         vm.startPrank(owner);
 
         rewardtoken = new RewardToken();
-        vm.stopPrank();
-        vm.startPrank(owner);
+        // vm.stopPrank();
+        // vm.startPrank(owner);
         rewardnft = new RewardNft("RewardNft", "RNFT", "ipfs://");
-        vm.stopPrank();
+        // vm.stopPrank();
         // vm.startPrank(owner);
         console.log("rewardtoken:", address(rewardtoken));
         console.log("rewardnft:", address(rewardnft));
-        vm.startPrank(owner);
+        // vm.startPrank(owner);
         // Transfer Reward tokens from owner to the contract
         rewardtoken.transfer(address(this), 5000);
 
@@ -60,27 +58,22 @@ contract CrowdfundingTest is Test {
         vm.deal(addr2, 100 ether);
         vm.deal(addr3, 100 ether);
         vm.deal(addr4, 100 ether);
-        // address crowdfundingAddr = address(this);
+        vm.deal(addr5, 100 ether);
 
-        // Set crowdfunding contract in the token contracts
-        // vm.startPrank(owner);
-        // // rewardtoken.setCrowdfundingContract(crowdfundingAddr);
-        // // rewardnft.setCrowdfundingContract(crowdfundingAddr);
-        // vm.stopPrank();
-        // vm.Prank(owner);
         console.log("Owner_____:", owner);
-        console.log("Address 2____:", addr2);
-        console.log("Address 3:", addr3);
-        console.log("Contract Address:", crowdfundingAddr);
+        console.log("Address 2_____:", addr2);
+        console.log("Address 3_____:", addr3);
+        console.log("Address 4_____:", addr4);
+        console.log("Address 5_____:", addr5);
+        console.log("Contract Address_____:", crowdfundingAddr);
         // Log the addresses
-        console.log("Crowdfunding contract address:", address(crowdfunding));
-        console.log("RewardToken contract address:", address(rewardtoken));
-        console.log("RewardNFT contract address:", address(rewardnft));
-        // vm.stopPrank();
+        console.log("Crowdfunding contract address______:", address(crowdfunding));
+        console.log("RewardToken contract address______:", address(rewardtoken));
+        console.log("RewardNFT contract address______:", address(rewardnft));
     }
 
     // ******DEPLOYMENT******//
-    // state variables at deployment
+    // Test state variables at deployment
     // Should set the correct CrowdFunding contract owner
     function test_setContractOwner() public view {
         assertEq(crowdfunding.Owner(), owner);
@@ -90,6 +83,7 @@ contract CrowdfundingTest is Test {
         assertEq(rewardtoken.owner(), owner);
     }
 
+    // should transfer the correct amount of reward tokens to the crowdfunding contract
     function test_RewardTokenBalanceOfCrowdfundingOnDeployment() public view {
         uint256 contractBal1 = rewardtoken.balanceOf(crowdfundingAddr);
         assertEq(contractBal1, 5000);
@@ -97,89 +91,113 @@ contract CrowdfundingTest is Test {
         uint256 ownerRewardTokenBalance = rewardtoken.balanceOf(owner);
         assertEq(ownerRewardTokenBalance, 0);
     }
+
     // Should set the correct rewardNFT contract owner
-    // function test_setNFTContractOwner() public view {
-    //     assertEq(rewardnft.owner(), owner);
-    // }
+    function test_setNFTContractOwner() public view {
+        assertEq(rewardnft.owner(), owner);
+    }
 
-    // Should set the correct Nft contract Address
-    // function test_setNFTContractAddr() public view {
-    //     assertEq(crowdfunding.NFT_CONTRACT_ADDRESS(), nftAddr);
-    // }
-
-    // // Should set the correct Token contract Address
-    // function test_setTokenContractAddr() public view {
-    //     assertEq(crowdfunding.TOKEN_CONTRACT_ADDRESS(), tokenAddr);
-    // }
     // Should set the correct funding goal
     function test_setCorrectFundingGoal() public view {
         assertEq(crowdfunding.FUNDING_GOAL(), FUNDING_GOAL);
     }
+
     // Should set the correct token reward rate
     function test_setTokenReward() public view {
         assertEq(crowdfunding.tokenRewardRate(), REWARD_RATE);
     }
+
     // Should set the correct NFT threshold
     function test_set_NFT_Threshold() public view {
         assertEq(crowdfunding.NFT_THRESHOLD(), NFT_THRESHOLD);
     }
+
     // Should determine that totalFundsRaised is zero initially
     function test_total_funds_raised() public view {
         assertEq(crowdfunding.totalFundsRaised(), 0);
     }
+
     // Should set isFundingComplete to false initially
     function test_is_funding_complete() public view {
         assertEq(crowdfunding.isFundingComplete(), false);
     }
 
-    // Transactions
-    // Allows Eth contrib.
-    function test_Allows_eth_contribution() public {
+    // ********* TRANSACTIONS *********//
+    // Allows Eth contribution from user
+    function test_allow_eth_contribution() public {
         uint256 contributionAmount = 10 ether;
-        uint256 initialEthBalanceAddr2 = addr2.balance;
-        uint256 initialBalanceCrowdFunding = address(crowdfunding).balance;
+        uint256 addr2InitialEthBal = addr2.balance; // address 2 initial balance
 
-        uint256 contractBal1 = rewardtoken.balanceOf(crowdfundingAddr);
-        assertEq(contractBal1, 5000);
+        uint256 initialEthBalanceCrowdFunding = address(crowdfunding).balance; // initial balance of crowdfunding contract
+        console.log("Initial Eth Balance CrowdFunding_____:", initialEthBalanceCrowdFunding);
+
+        uint256 contractRewardTokenBal = rewardtoken.balanceOf(crowdfundingAddr);
+        assertEq(contractRewardTokenBal, 5000);
 
         uint256 ownerRewardTokenBalance = rewardtoken.balanceOf(owner);
         assertEq(ownerRewardTokenBalance, 0);
 
-        assertEq(initialBalanceCrowdFunding, 0);
-        assertEq(initialEthBalanceAddr2, 100 ether);
+        assertEq(initialEthBalanceCrowdFunding, 0);
+        assertEq(addr2InitialEthBal, 100 ether);
         // Perform the contribution
-        vm.startPrank(addr2);
-        console.log("Addr2_____", addr2);
-        // vm.prank(addr2);
+        vm.prank(addr2);
+        // console.log("Addr2_____:", addr2);
         crowdfunding.contribute{value: contributionAmount}();
-        // assertEq(initialBalanceCrowdFunding, 10);
-        vm.stopPrank();
-        uint256 finalBalanceaddr2 = addr2.balance;
-        uint256 finalBalanceCrowdFunding = address(crowdfunding).balance;
 
-        assertEq(finalBalanceaddr2, initialEthBalanceAddr2 - contributionAmount);
-        assertEq(finalBalanceCrowdFunding, initialBalanceCrowdFunding + contributionAmount);
+        uint256 addr2EthBalAfterContr = addr2.balance; // address 2 balance after contribution
+        uint256 crowdfundingBalAfterContr = address(crowdfunding).balance; // crowdfunding balance after contribution
+
+        assertEq(addr2EthBalAfterContr, addr2InitialEthBal - contributionAmount);
+        assertEq(crowdfundingBalAfterContr, initialEthBalanceCrowdFunding + contributionAmount);
     }
 
-    // determine that the token reward amount is based on contrib
-    function test_token_reward_amount() public {
-        uint256 rewardAmount = calculateTokenReward(2 ether);
+    // determine that the token reward amount is based on contribution
+    function test_calculate_token_reward_amount() public {
+        // first calculate the token reward for 2 ether
+        uint256 rewardAmount1 = calculateTokenReward(2 ether);
+        assertEq(rewardAmount1, 200);
 
-        vm.prank(addr2);
-        crowdfunding.contribute{value: 2 ether}();
+        // Calculate the token reward for 5 ether
+        uint256 rewardAmount2 = calculateTokenReward(5 ether);
+        assertEq(rewardAmount2, 500);
 
-        uint256 addr2RewardTokenBalance = rewardtoken.balanceOf(addr2);
-
-        assertEq(addr2RewardTokenBalance, rewardAmount);
+        // Calculate the token reward for 10 ether
+        uint256 rewardAmount3 = calculateTokenReward(10 ether);
+        assertEq(rewardAmount3, 1000);
     }
 
-    // mint tokens based on contrib amount
-    function test_mint_tokens_based_on_contribution() public {
-        uint256 expectedTokens = calculateTokenReward(2 ether);
+    // Should send the correct token reward to the contributor
+    function test_user_receive_accurate_token_reward_on_contribution() public {
+        uint256 contributionAmount = 10 ether;
+        uint256 addr3InitialEthBal = addr3.balance; // address 3 initial balance
+        uint256 addr3InitialTokenBal = rewardtoken.balanceOf(addr3); // address 3 initial token balance
+        console.log("Initial Token Balance Address 3_____:", addr3InitialTokenBal);
+        uint256 rewardAmount = calculateTokenReward(10 ether);
+        console.log("Reward Amount______:", rewardAmount);
 
-        vm.prank(addr2);
-        crowdfunding.contribute{value: 2 ether}();
-        assertEq(rewardtoken.balanceOf(addr2), expectedTokens);
+        uint256 initialEthBalanceCrowdFunding = address(crowdfunding).balance; // initial balance of crowdfunding contract
+        console.log("Initial Eth Balance CrowdFunding_____:", initialEthBalanceCrowdFunding);
+
+        uint256 contractRewardTokenBal = rewardtoken.balanceOf(crowdfundingAddr);
+        assertEq(contractRewardTokenBal, 5000);
+
+        uint256 ownerRewardTokenBalance = rewardtoken.balanceOf(owner);
+        assertEq(ownerRewardTokenBalance, 0);
+
+        assertEq(initialEthBalanceCrowdFunding, 0);
+        assertEq(addr3InitialEthBal, 100 ether);
+
+        // Perform the contribution with address 3
+        vm.prank(addr3);
+        crowdfunding.contribute{value: contributionAmount}();
+
+        uint256 addr3EthBalAfterContr = addr3.balance; // address 3 balance after contribution
+        uint256 addr3TokenBalAfterContr = rewardtoken.balanceOf(addr3); // address 3 initial token balance
+        uint256 crowdfundingBalAfterContrtion = address(crowdfunding).balance; // crowdfunding balance after contribution
+
+        assertEq(addr3TokenBalAfterContr, rewardAmount);
+        assertEq(addr3EthBalAfterContr, addr3InitialEthBal - contributionAmount);
+        assertEq(crowdfundingBalAfterContrtion, initialEthBalanceCrowdFunding + contributionAmount);
     }
 
     // should not mint NFT below threshold
@@ -286,7 +304,7 @@ contract CrowdfundingTest is Test {
 
         vm.expectRevert("Funding goal not yet reached");
 
-        vm.prank(address(this));
+        vm.prank(owner);
         crowdfunding.withdrawFunds();
     }
 
@@ -338,6 +356,8 @@ contract CrowdfundingTest is Test {
         vm.expectRevert("Funding goal already reached");
         vm.prank(addr3);
         crowdfunding.contribute{value: 0.00001 ether}();
+
+        vm.prank(owner);
         crowdfunding.withdrawFunds();
     }
 
@@ -373,7 +393,7 @@ contract CrowdfundingTest is Test {
         assertEq(addr3.balance, expectedBalance);
     }
 
-    // Events
+    // ********* EVENTS *********//
     // Should emit FundsWithdrawn event
     function test_emit_funds_withdrawn_event() public {
         // First reach the funding goal
@@ -383,10 +403,9 @@ contract CrowdfundingTest is Test {
         // Set up the event check
         vm.expectEmit(true, true, false, true, address(crowdfunding));
 
-        // Emit the expected event with expected arguments
-        emit FundsWithdrawn(address(this), FUNDING_GOAL);
+        emit FundsWithdrawn(owner, FUNDING_GOAL); // emit the expected arguments
 
-        // Withdraw the funds - using address(this) as owner
+        vm.prank(owner); // Prank the owner to withdraw funds
         crowdfunding.withdrawFunds();
     }
     // Should emit TokenRewardSent event
@@ -422,7 +441,7 @@ contract CrowdfundingTest is Test {
         vm.expectEmit(true, true, true, true, address(crowdfunding));
 
         // Emit the expected event with expected arguments
-        emit NFTRewardSent(addr2, 0); // First NFT should have ID 0
+        emit NFTRewardSent(addr2, 1); // First NFT should have ID 1
 
         // Make the contribution that should trigger the NFT reward
         vm.prank(addr2);

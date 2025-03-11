@@ -11,10 +11,6 @@ contract Crowdfunding {
     uint public constant NFT_THRESHOLD = 5 ether;
     uint256 public totalFundsRaised;
     bool public isFundingComplete;
-    // address public constant NFT_CONTRACT_ADDRESS =
-    //     0x2e234DAe75C793f67A35089C9d99245E1C58470b;
-    // address public constant TOKEN_CONTRACT_ADDRESS =
-    //     0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f;
 
     RewardToken public rewardToken;
     RewardNft public rewardNFT;
@@ -30,28 +26,24 @@ contract Crowdfunding {
     event NFTRewardSent(address indexed contributor, uint256 tokenId);
     event FundsWithdrawn(address indexed projectOwner, uint256 amount);
 
-    constructor(
-        uint256 _tokenRewardRate,
-        address _rewardToken,
-        address _rewardNft
-    ) {
+    constructor(uint256 _tokenRewardRate, address _rewardToken, address _rewardNft) {
         Owner = msg.sender;
         rewardToken = RewardToken(_rewardToken);
         rewardNFT = RewardNft(_rewardNft);
         tokenRewardRate = _tokenRewardRate;
     }
 
-    function contribute() external payable {
+    function contribute() external payable returns (bool) {
         // console.log("Ether Value contribution___%s", msg.value);
         require(msg.value > 0, "Contribution must be greater than 0");
         require(!isFundingComplete, "Funding goal already reached");
 
         // Calculate contribution amount and process any refunds
-        uint256 contributionAmount = _calculateContributionAndRefund(msg.value);
-        // console.log("contributed Amount____%s", contributionAmount);
+        uint256 refundableAmount = _determineIfAmountIsRefundable(msg.value);
+        // console.log("contributed Amount____%s", refundableAmount);
         // Update contribution record
-        contributions[msg.sender] += contributionAmount;
-        totalFundsRaised += contributionAmount;
+        contributions[msg.sender] += refundableAmount;
+        totalFundsRaised += refundableAmount;
         // console.log("total funds raised____%s", totalFundsRaised);
 
         // Check if funding goal is reached
@@ -63,29 +55,38 @@ contract Crowdfunding {
         // Calculate token reward
         uint256 tokenReward = calculateReward(msg.value);
 
-        console.log("token reward____%s", tokenReward);
+        // console.log("token reward____%s", tokenReward);
 
         if (tokenReward > 0) {
-            console.log("the contract caller____%s", msg.sender);
+            // console.log("the contract caller____%s", msg.sender);
             sendRewardToken(tokenReward, msg.sender);
-            console.log("token reward____%s", tokenReward);
+            // console.log("token reward____%s", tokenReward);
             emit TokenRewardSent(msg.sender, tokenReward);
+            return true;
         }
 
         // Check for NFT eligibility
-        if (
-            contributions[msg.sender] >= NFT_THRESHOLD &&
-            !hasReceivedNFT[msg.sender]
-        ) {
-            uint256 tokenId = rewardNFT.mintNFT(msg.sender);
-            hasReceivedNFT[msg.sender] = true;
-            emit NFTRewardSent(msg.sender, tokenId);
-        }
+        mintNft(msg.sender);
 
         emit ContributionReceived(msg.sender, msg.value);
     }
 
-    function calculateReward(uint256 _value) private returns (uint256) {
+    function checkNftEligibilty(address _address) private returns (bool) {
+        if (contributions[_address] >= NFT_THRESHOLD && !hasReceivedNFT[_address]) {
+            return true;
+        }
+        return false;
+    }
+
+    function mintNft(address _contributor) private returns (bool) {
+        require(checkNftEligibilty(_contributor), "Not eligible for NFT reward");
+        uint256 tokenId = rewardNFT.mintNFT(_contributor);
+        hasReceivedNFT[_contributor] = true;
+        emit NFTRewardSent(_contributor, tokenId);
+        return true;
+    }
+
+    function calculateReward(uint256 _value) private view returns (uint256) {
         uint256 tokenReward = (_value * tokenRewardRate) / 1 ether;
 
         return tokenReward;
@@ -96,21 +97,24 @@ contract Crowdfunding {
         rewardToken.transferFrom(address(this), _recipient, rewardAmount);
     }
 
-    function _calculateContributionAndRefund(
-        uint256 _contributionAmount
-    ) private returns (uint256) {
+    function _determineIfAmountIsRefundable(uint256 _contributionAmount) private returns (uint256) {
         // Calculate the remaining amount needed to complete the funding goal
-        uint256 remainingAmount = FUNDING_GOAL - totalFundsRaised;
-        uint256 contributionAmount = _contributionAmount;
-
-        // If contribution exceeds remaining goal, adjust contribution and refund excess
-        if (_contributionAmount > remainingAmount) {
-            contributionAmount = remainingAmount;
-            uint256 refundAmount = _contributionAmount - remainingAmount;
-            payable(msg.sender).transfer(refundAmount);
+        // return refundableAmount;
+        uint256 amountToReachThreshold = FUNDING_GOAL - totalFundsRaised;
+        if (_contributionAmount > amountToReachThreshold) {
+            // return the excess amount
+            uint256 refundAmount = _contributionAmount - amountToReachThreshold;
+            return refundAmount;
         }
+        return 0;
+    }
 
-        return contributionAmount;
+    function transferRefundableAmount(uint256 _amount, address _contributor) private {
+        uint256 refundable = _determineIfAmountIsRefundable(_amount);
+        if (refundable > 0) {
+            (bool success, ) = _contributor.call{value: refundable}("");
+            require(success, "Transfer failed");
+        }
     }
 
     function withdrawFunds() external {
@@ -124,9 +128,7 @@ contract Crowdfunding {
         emit FundsWithdrawn(Owner, amount);
     }
 
-    function getContribution(
-        address contributor
-    ) external view returns (uint256) {
+    function getContribution(address contributor) external view returns (uint256) {
         return contributions[contributor];
     }
 }
