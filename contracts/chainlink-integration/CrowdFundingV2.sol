@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 import {console} from "forge-std/Test.sol";
-// import cohort-6/lib/
-// import "@chainlink-contracts/contracts/token/ERC721/ERC721.sol";
 import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
-
-// cohort-6/lib/chainlink-local/lib/chainlink-brownie-contracts/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol
-
 import "../../contracts/with-foundry/RewardToken.sol";
 import "../../contracts/with-foundry/RewardNft.sol";
 
@@ -61,14 +56,6 @@ contract CrowdfundingV2 {
 
         return price; // Price has 8 decimals, e.g., 3000.00000000
     }
-
-    // function getRoundData(
-    //     uint80 _roundId
-    // )
-    //     external
-    //     view
-    //     returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
-    // {}
 
     function contribute() external payable returns (bool) {
         // console.log("Ether Value contribution___%s", msg.value);
