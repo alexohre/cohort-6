@@ -12,7 +12,7 @@ contract CrowdfundingTest is Test {
     Crowdfunding public crowdfunding;
     RewardToken public rewardtoken;
     RewardNft public rewardnft;
-    uint public constant FUNDING_GOAL = 50 ether;
+    uint public constant FUNDING_GOAL_IN_USD = 50 ether;
     uint public constant NFT_THRESHOLD = 5 ether;
     uint256 public totalFundsRaised;
     bool public isFundingComplete;
@@ -99,7 +99,7 @@ contract CrowdfundingTest is Test {
 
     // Should set the correct funding goal
     function test_setCorrectFundingGoal() public view {
-        assertEq(crowdfunding.FUNDING_GOAL(), FUNDING_GOAL);
+        assertEq(crowdfunding.FUNDING_GOAL_IN_USD(), FUNDING_GOAL_IN_USD);
     }
 
     // Should set the correct token reward rate
@@ -281,11 +281,11 @@ contract CrowdfundingTest is Test {
         assertEq(owner.balance, 0);
 
         vm.startPrank(addr2);
-        crowdfunding.contribute{value: FUNDING_GOAL}();
+        crowdfunding.contribute{value: FUNDING_GOAL_IN_USD}();
         vm.stopPrank();
         assertEq(addr2.balance, 50 ether);
 
-        assertEq(crowdfunding.totalFundsRaised(), FUNDING_GOAL);
+        assertEq(crowdfunding.totalFundsRaised(), FUNDING_GOAL_IN_USD);
         assertEq(crowdfunding.contributions(addr2), 50 ether);
         // vm.prank(address(crowdfunding));
         // vm.startPrank(owner);
@@ -293,7 +293,7 @@ contract CrowdfundingTest is Test {
 
         // crowdfunding.withdrawFunds();
         // vm.stopPrank();
-        // assertEq(owner.balance, initialOwnerBalance + FUNDING_GOAL);
+        // assertEq(owner.balance, initialOwnerBalance + FUNDING_GOAL_IN_USD);
     }
 
     // should not allow withdrawal if funding goal not reached
@@ -349,7 +349,7 @@ contract CrowdfundingTest is Test {
         crowdfunding.contribute{value: 0 ether}();
     }
 
-    function test_reject_contributions_after_funding_goal_is_reached() public {
+    function test_reject_contributions_after_FUNDING_GOAL_IN_USD_is_reached() public {
         vm.prank(addr2);
         crowdfunding.contribute{value: 50 ether}();
 
@@ -372,7 +372,7 @@ contract CrowdfundingTest is Test {
 
         // Calculate remaining amount needed and prepare second contribution
         uint256 secondContribution = 10 ether;
-        uint256 remainingToGoal = FUNDING_GOAL - initialContribution; // Should be 5 ether
+        uint256 remainingToGoal = FUNDING_GOAL_IN_USD - initialContribution; // Should be 5 ether
         uint256 expectedRefund = secondContribution - remainingToGoal; // Should be 5 ether
 
         // Record addr3's balance before contribution
@@ -383,7 +383,7 @@ contract CrowdfundingTest is Test {
         crowdfunding.contribute{value: secondContribution}();
 
         // Verify final states
-        assertEq(crowdfunding.totalFundsRaised(), FUNDING_GOAL);
+        assertEq(crowdfunding.totalFundsRaised(), FUNDING_GOAL_IN_USD);
         assertEq(crowdfunding.isFundingComplete(), true);
         assertEq(crowdfunding.getContribution(addr3), remainingToGoal);
 
@@ -398,12 +398,12 @@ contract CrowdfundingTest is Test {
     function test_emit_funds_withdrawn_event() public {
         // First reach the funding goal
         vm.prank(addr2);
-        crowdfunding.contribute{value: FUNDING_GOAL}();
+        crowdfunding.contribute{value: FUNDING_GOAL_IN_USD}();
 
         // Set up the event check
         vm.expectEmit(true, true, false, true, address(crowdfunding));
 
-        emit FundsWithdrawn(owner, FUNDING_GOAL); // emit the expected arguments
+        emit FundsWithdrawn(owner, FUNDING_GOAL_IN_USD); // emit the expected arguments
 
         vm.prank(owner); // Prank the owner to withdraw funds
         crowdfunding.withdrawFunds();

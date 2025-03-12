@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 import {console} from "forge-std/Test.sol";
+// import cohort-6/lib/
+// import "@chainlink-contracts/contracts/token/ERC721/ERC721.sol";
+import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
 
-import "./RewardToken.sol";
-import "./RewardNft.sol";
+// cohort-6/lib/chainlink-local/lib/chainlink-brownie-contracts/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol
 
-contract Crowdfunding {
+import "../../contracts/with-foundry/RewardToken.sol";
+import "../../contracts/with-foundry/RewardNft.sol";
+
+contract CrowdfundingV2 {
     address public Owner;
-    uint public constant FUNDING_GOAL_IN_USD = 50 ether;
-    uint public constant NFT_THRESHOLD = 5 ether;
+    uint public constant FUNDING_GOAL_IN_USD = 50000;
+    uint public constant NFT_THRESHOLD = 1000;
     uint256 public totalFundsRaised;
     bool public isFundingComplete;
 
@@ -20,6 +25,9 @@ contract Crowdfunding {
     mapping(address => uint256) public contributions;
     mapping(address => bool) public hasReceivedNFT;
 
+    // Chainlink PriceFeed
+    AggregatorV3Interface priceFeed;
+    address public constant ETH_USD_ADDR = 0x694AA1769357215DE4FAC081bf1f309aDC325306;
     // Events
     event ContributionReceived(address indexed contributor, uint256 amount);
     event TokenRewardSent(address indexed contributor, uint256 amount);
@@ -27,11 +35,40 @@ contract Crowdfunding {
     event FundsWithdrawn(address indexed projectOwner, uint256 amount);
 
     constructor(uint256 _tokenRewardRate, address _rewardToken, address _rewardNft) {
+        /**
+         * Network: Sepolia
+         * Data Feed: ETH/USD
+         * Address: 0x694AA1769357215DE4FAC081bf1f309aDC325306
+         */
+        priceFeed = AggregatorV3Interface(ETH_USD_ADDR);
         Owner = msg.sender;
         rewardToken = RewardToken(_rewardToken);
         rewardNFT = RewardNft(_rewardNft);
         tokenRewardRate = _tokenRewardRate;
     }
+
+    // function to retrieve ETH price in USD with Chainlink priceFeed
+    function getLatestPrice() public view returns (int) {
+        (
+            ,
+            // uint80 roundID
+            int price, // uint256 startedAt
+            // uint256 updatedAt
+            ,
+            ,
+
+        ) = priceFeed.latestRoundData();
+
+        return price; // Price has 8 decimals, e.g., 3000.00000000
+    }
+
+    // function getRoundData(
+    //     uint80 _roundId
+    // )
+    //     external
+    //     view
+    //     returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    // {}
 
     function contribute() external payable returns (bool) {
         // console.log("Ether Value contribution___%s", msg.value);
