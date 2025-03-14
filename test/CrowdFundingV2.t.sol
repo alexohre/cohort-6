@@ -5,7 +5,8 @@ import {Test, console} from "forge-std/Test.sol";
 import {CrowdfundingV2} from "../contracts/chainlink-integration/CrowdFundingV2.sol";
 import {RewardToken} from "../contracts/with-foundry/RewardToken.sol";
 import {RewardNft} from "../contracts/with-foundry/RewardNft.sol";
-import {AggregatorV3Interface} from "../lib/chainlink-local/lib/chainlink-brownie-contracts/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
+// import {AggregatorV3Interface} from "../lib/chainlink-local/lib/chainlink-brownie-contracts/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
 
 contract CrowdfundingTest is Test {
     // Crowdfunding contract state variables
@@ -17,6 +18,7 @@ contract CrowdfundingTest is Test {
     uint256 public totalFundsRaised;
     bool public isFundingComplete;
     uint256 constant REWARD_RATE = 100;
+    uint256 sepoliaFork;
 
     // Addresses for testing
     address crowdfundingV2Addr = address(this);
@@ -35,6 +37,14 @@ contract CrowdfundingTest is Test {
     address public constant ETH_USD_ADDR = 0x694AA1769357215DE4FAC081bf1f309aDC325306;
 
     function setUp() public {
+        // Create the Sepolia fork
+        sepoliaFork = vm.createFork("UPDATE-YOUR-RPC-URL-HERE-NOT-SAFE-FOR-GITHUB");
+        vm.selectFork(sepoliaFork);
+
+        // Set the fork to a specific block before any other operations
+        vm.rollFork(7887153);
+
+        // deploy contracts with the owner address
         vm.startPrank(owner);
 
         rewardtoken = new RewardToken();

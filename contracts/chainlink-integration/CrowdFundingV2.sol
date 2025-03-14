@@ -43,18 +43,18 @@ contract CrowdfundingV2 {
     }
 
     // function to retrieve ETH price in USD with Chainlink priceFeed
-    function getLatestPrice() public view returns (int) {
+    function getLatestPrice() public view returns (int256) {
         (
             ,
             // uint80 roundID
-            int price, // uint256 startedAt
-            // uint256 updatedAt
+            int256 answer, // uint256 startedAt
             ,
             ,
 
-        ) = priceFeed.latestRoundData();
+        ) = // uint256 updatedAt
+            priceFeed.latestRoundData();
 
-        return price; // Price has 8 decimals, e.g., 3000.00000000
+        return answer; // Price has 8 decimals, e.g., 3000.00000000
     }
 
     function contribute() external payable returns (bool) {
