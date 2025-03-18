@@ -6,6 +6,7 @@ import {CrowdfundingV2} from "../contracts/chainlink-integration/CrowdFundingV2.
 import {RewardToken} from "../contracts/with-foundry/RewardToken.sol";
 import {RewardNft} from "../contracts/with-foundry/RewardNft.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
+
 // import {AggregatorV3Interface} from "../lib/chainlink-local/lib/chainlink-brownie-contracts/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
 
 contract CrowdfundingTest is Test {
@@ -38,7 +39,8 @@ contract CrowdfundingTest is Test {
 
     function setUp() public {
         // Create the Sepolia fork
-        sepoliaFork = vm.createFork("UPDATE-YOUR-RPC-URL-HERE-NOT-SAFE-FOR-GITHUB");
+        string memory rpcUrl = vm.envString("FOUNDRY_RPC_URL");
+        sepoliaFork = vm.createFork(rpcUrl);
         vm.selectFork(sepoliaFork);
 
         // Set the fork to a specific block before any other operations
