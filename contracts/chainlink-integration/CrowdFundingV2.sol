@@ -8,8 +8,10 @@ import "../../contracts/with-foundry/RewardNft.sol";
 contract CrowdfundingV2 {
     address public Owner;
     uint public constant FUNDING_GOAL_IN_USD = 50000;
-    uint public constant NFT_THRESHOLD = 1000;
+    uint public constant NFT_THRESHOLD_IN_USD = 5000;
     uint256 public totalFundsRaised;
+    // uint256 public totalFundsRaisedInUsd; // in USD (with 8 decimals)
+
     bool public isFundingComplete;
 
     RewardToken public rewardToken;
@@ -57,14 +59,25 @@ contract CrowdfundingV2 {
         return answer; // Price has 8 decimals, e.g., 3000.00000000
     }
 
+    function getConversionRate(uint256 ethAmount) public view returns (uint256) {
+        int256 ethPrice = getLatestPrice();
+        // Convert eth amount to USD (divide by 1e18 for eth decimals, multiply by 1e8 for price feed decimals)
+        uint256 ethAmountInUsd = (ethAmount * uint256(ethPrice)) / 1e18;
+        return ethAmountInUsd;
+    }
+
     function contribute() external payable returns (bool) {
         require(msg.value > 0, "Contribution must be greater than 0");
         require(!isFundingComplete, "Funding goal already reached");
 
-        // Calculate contribution amount and process any refunds
+        // Convert contribution to USD
+        uint256 contributionInUsd = getConversionRate(msg.value);
+        uint256 totalFundsRaisedInUsd = getConversionRate(totalFundsRaised);
 
-        uint256 refundableAmount = _determineIfAmountIsRefundable(msg.value);
+        // Calculate contribution amount and process any refunds
+        uint256 refundableAmount = _determineIfAmountIsRefundable(msg.value, contributionInUsd, totalFundsRaisedInUsd);
         uint256 actualContribution = msg.value - refundableAmount;
+        // uint256 actualContributionInUsd = getConversionRate(actualContribution);
 
         // check if refundable amount is > 0
         if (refundableAmount > 0) {
@@ -76,8 +89,8 @@ contract CrowdfundingV2 {
         contributions[msg.sender] += actualContribution;
         totalFundsRaised += actualContribution;
 
-        // Check if funding goal is reached
-        if (totalFundsRaised >= FUNDING_GOAL_IN_USD) {
+        // Check if funding goal is reached using current USD value
+        if (totalFundsRaisedInUsd + contributionInUsd >= FUNDING_GOAL_IN_USD * 1e8) {
             isFundingComplete = true;
         }
 
@@ -101,7 +114,7 @@ contract CrowdfundingV2 {
     }
 
     function checkNftEligibility(address _address) private view returns (bool) {
-        return contributions[_address] >= NFT_THRESHOLD && !hasReceivedNFT[_address];
+        return contributions[_address] >= NFT_THRESHOLD_IN_USD && !hasReceivedNFT[_address];
     }
 
     function mintNft(address _contributor) private returns (bool) {
@@ -125,13 +138,21 @@ contract CrowdfundingV2 {
         return true;
     }
 
-    function _determineIfAmountIsRefundable(uint256 _contributionAmount) private view returns (uint256) {
-        // Calculate the remaining amount needed to complete the funding goal
-        uint256 amountToReachThreshold = FUNDING_GOAL_IN_USD - totalFundsRaised;
-        if (_contributionAmount >= amountToReachThreshold) {
-            // return the excess amount
-            uint256 refundAmount = _contributionAmount - amountToReachThreshold;
-            return refundAmount;
+    // Update the _determineIfAmountIsRefundable function
+    function _determineIfAmountIsRefundable(
+        uint256 _contributionAmount,
+        uint256 _contributionInUsd,
+        uint256 _totalFundsRaisedInUsd
+    ) private pure returns (uint256) {
+        uint256 remainingInUsd = FUNDING_GOAL_IN_USD * 1e8 - _totalFundsRaisedInUsd;
+        console.log("Remaining in USD: %s", remainingInUsd);
+        if (_contributionInUsd > remainingInUsd) {
+            // Calculate excess in USD then convert back to ETH
+            uint256 excessUsd = _contributionInUsd - remainingInUsd;
+            uint256 excessEth = (_contributionAmount * excessUsd) / _contributionInUsd;
+            console.log("Excess USD: %s", excessUsd);
+            console.log("Excess ETH: %s", excessEth);
+            return excessEth;
         }
         return 0;
     }
